@@ -1,5 +1,7 @@
 """utils"""
 import cv2
+import numpy as np
+from PIL import Image
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +16,14 @@ def str_join(paths: []):
         paths: List of paths.
     """
     return "/".join(paths)
+
+
+def str_join_array(label, array):
+    return np.array(list(map(lambda x: str_join([label, x]), array)))
+
+
+def rev_str_join_array(label, array):
+    return np.array(list(map(lambda x: str_join([x, label]), array)))
 
 
 def create_folder(path: str):
@@ -91,6 +101,10 @@ def read_image(image_path: str):
     return cv2.imread(image_path)
 
 
+def read_image2(image_path: str):
+    return Image.open(image_path)
+
+
 def convert_to_gray(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -101,3 +115,16 @@ def convert_to_blob(image):
 
 def read_net_dnn(prototxt: str = "src/deploy.prototxt", model: str = "src/res10_300x300_ssd_iter_140000.caffemodel"):
     return cv2.dnn.readNetFromCaffe(prototxt, model)
+
+
+def crop_Image_rect(image, box: np.array, size):
+    image = read_image2(image)
+    return image.crop(box).resize(size)
+
+
+def save_Image(image, path):
+    try:
+        image.save(path)
+        return True
+    except:
+        return False
