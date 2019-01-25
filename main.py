@@ -1,5 +1,6 @@
 from till.preprocessing import preprocessing
 from till.preprocessing import face
+from till.transfer import tl
 from till.utils import create_folder, delete_folder, get_folder_info, str_join, str_join_array, rev_str_join_array
 import numpy as np
 import time
@@ -27,4 +28,7 @@ import time
 #preprocessing.flow_from_face_directory("data", "output")
 # preprocessing.prepare_dataset()
 
-preprocessing.generate_dataset("dataset", "faces")
+#preprocessing.generate_dataset("dataset", "faces")
+
+# print(tl.check_device())
+print(tl.transforms_data())

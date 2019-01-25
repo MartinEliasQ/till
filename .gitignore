@@ -120,3 +120,8 @@ dmypy.json
 *.mp4
 *.avi
 .vscode
+
+faces 
+output
+data
+dataset
