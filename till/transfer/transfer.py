@@ -3,19 +3,20 @@
 import torch
 from till.utils import get_from_dict
 from torchvision import (datasets, transforms, models)
-from torch import optim
+from torch import (optim, nn)
 
 
 class tl(object):
     def __init__(self, premodel):
         self.model = self.select_premodel(premodel)
+        self.train_losses, self.test_losses = [], []
 
     @staticmethod
     def check_gpu():
         return (True, 'cuda') if torch.cuda.is_available() else (False, 'cpu')
 
     @staticmethod
-    def create_loaders(train, val, test, batch_size=20):
+    def create_loaders(train, val, test, batch_size=64):
         train_loader = torch.utils.data.DataLoader(
             train, batch_size=batch_size, shuffle=True)
         val_loader = torch.utils.data.DataLoader(
@@ -46,8 +47,9 @@ class tl(object):
                                          std=[0.229, 0.224, 0.225])
         to_tensor = transforms.ToTensor()
         config_transform.append(resize)
-        config_transform.append(normalize)
         config_transform.append(to_tensor)
+        config_transform.append(normalize)
+
         return transforms.Compose(config_transform)
 
     @staticmethod
@@ -70,61 +72,69 @@ class tl(object):
     def set_classifier(self, new_classifier):
         self.model.classifier = new_classifier
 
-    def set_optimizer(self):
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.003)
+    def select_optimizer(self, optimizer):
+        return {
+            "Adam": optim.Adam(self.model.parameters())
+        }[optimizer]
+
+    def select_criterion(self, criterion):
+        return {
+            "NLLLoss": nn.NLLLoss()
+        }[criterion]
 
     def train(self, config, params):
-        criterion, classifier = get_from_dict(
-            config, ["criterion", "classifier"])
-        self.set_classifier(classifier)
-        self.set_optimizer()
-        self.model.to(tl.check_gpu()[1])
-
+        device = tl.check_gpu()[1]
+        devide = "cuda"
         epochs, steps = get_from_dict(params, ["epochs", "steps"])
-        running_loss = 0
-        print_every = 5
+        criterion_config, classifier_config, optimizer_config = get_from_dict(
+            config, ["criterion", "classifier", "optimizer"])
+        self.set_classifier(classifier_config)
+        #optimizer = self.select_optimizer(optimizer_config)
+        optimizer = optim.Adam(self.model.parameters())
+        criterion = self.select_criterion(criterion_config)
+        self.model.to(tl.check_gpu()[1])
+        (trainf, valf, testf) = "", "", ""
+        (train_loader, val_loader, test_loader) = "", "", ""
         (trainf, valf, testf) = tl.load_dataset()
-
-        (train_loader, val_loader, train_loader) = tl.create_loaders(
+        (train_loader, val_loader, test_loader) = tl.create_loaders(
             trainf, valf, testf)
+        print(train_loader)
+        for e in range(epochs):
+            running_loss = 0
+            print("Trainning....")
+            for images, labels in train_loader:
+                print("B")
+                images, labels = images.to(
+                    device), labels.to(device)
+                optimizer.zero_grad()
 
-        for epoch in range(epochs):
-            for inputs, labels in train_loader:
-                steps += 1
-                inputs, labels = inputs.to(
-                    tl.check_gpu()[1]), labels.to(tl.check_gpu()[1])
-
-                self.optimizer.zero_grad()
-                logps = self.model.forward(inputs)
-                loss = criterion(logps, labels)
+                log_ps = self.model(images)
+                loss = criterion(log_ps, labels)
                 loss.backward()
-                self.optimizer.step()
+                optimizer.step()
 
                 running_loss += loss.item()
+            else:
+                val_loss = 0
+                accuracy = 0
 
-                if steps % print_every == 0:
-                    test_loss = 0
-                    accuracy = 0
+                with torch.no_grad():
                     self.model.eval()
-                    with torch.no_grad():
-                        for inputs, labels in val_loader:
-                            inputs, labels = inputs.to(
-                                tl.check_gpu()[1]), labels.to(tl.check_gpu()[1])
-                            logps = self.model.forward(inputs)
-                            batch_loss = criterion(logps, labels)
+                    for images, labels in val_loader:
+                        images, labels = images.to(
+                            device), labels.to(device)
 
-                            test_loss += batch_loss.item()
+                        log_ps = self.model(images)
+                        test_loss += criterion(log_ps, labels)
 
-                            # Calculate accuracy
-                            ps = torch.exp(logps)
-                            top_p, top_class = ps.topk(1, dim=1)
-                            equals = top_class == labels.view(
-                                *top_class.shape)
-                            accuracy += torch.mean(
-                                equals.type(torch.FloatTensor)).item()
-                print(f"Epoch {epoch+1}/{epochs}.. "
-                      f"Train loss: {running_loss/print_every:.3f}.. "
-                      f"Test loss: {test_loss/len(val_loader):.3f}.. "
-                      f"Test accuracy: {accuracy/len(val_loader):.3f}")
-                running_loss = 0
+                        ps = torch.exp(log_ps)
+                        top_p, top_class = ps.topk(1, dim=1)
+                        equals = top_class == labels.view(*top_class.shape)
+                        accuracy += torch.mean(equals.type(torch.FloatType))
+
                 self.model.train()
+                self.train_losses.append(running_loss/len(train_loader))
+                self.test_losses.append(test_loss/len(val_loader))
+
+                print("Epoch", str(e+1), "/", str(epochs))
+                print("Training Loss", str(self.train_losses[-1]))
