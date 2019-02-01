@@ -5,7 +5,8 @@ from till.utils import create_folder, delete_folder, get_folder_info, str_join, 
 import numpy as np
 import time
 
-# pre = preprocessing({"capture_rate": 0.2})
+#
+#  pre = preprocessing({"capture_rate": 0.2})
 # delete_folder("output")
 # create_folder("output")
 # print(get_folder_info("./till/tests"))
@@ -26,9 +27,9 @@ import time
 # detection.selec_method("dnn")
 # print(detection.run_detection())
 #preprocessing.flow_from_face_directory("data", "output")
-# preprocessing.prepare_dataset()
+preprocessing.prepare_dataset()
 
-#preprocessing.generate_dataset("dataset", "faces")
+preprocessing.generate_dataset("dataset", "faces")
 
 # print(tl.check_device())
-print(tl.transforms_data())
+# print(tl.transforms_data())

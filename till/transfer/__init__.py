@@ -1,3 +1,3 @@
 from .transfer import tl
-
-__all__ = ['tl']
+from .data_augmentation import ImgAugTransform
+__all__ = ['tl', 'ImgAugTransform']

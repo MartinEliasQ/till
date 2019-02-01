@@ -5,6 +5,7 @@ from PIL import Image
 import os
 from pathlib import Path
 import shutil
+from sklearn.metrics import confusion_matrix
 import sys
 import time
 
@@ -88,7 +89,7 @@ def verboose(message: str):
 
 def loader(count, total, status=''):
     # From https://gist.github.com/vladignatyev/06860ec2040cb497f0f3
-    bar_len = 100
+    bar_len = 50
     filled_len = int(round(bar_len * count / float(total)))
 
     percents = round(100.1 * count / float(total), 1)  # 100.1 to display%
@@ -128,3 +129,41 @@ def save_Image(image, path):
         return True
     except:
         return False
+
+
+def accuracy(tn, fp, fn, tp):
+    return (tn + tp)/(tn + fp + fn + tp)
+
+
+def sensitivity(tn, fp, fn, tp):
+    '''True positive rate || recall Sensitivity'''
+    return (tp)/(fn+tp)
+
+
+def specificity(tn, fp, fn, tp):
+    '''True negative rate'''
+    return (tn)/(tn + fp)
+
+
+def precision(tn, fp, fn, tp):
+    return (tp)/(fp + tp)
+
+
+def metrics(Y_true, y_pred):
+    tn, fp, fn, tp = confusion_matrix(Y_true, y_pred).ravel()
+    print(Y_true, y_pred)
+    metrics = {"accuracy": accuracy(tn, fp, fn, tp),
+               "sensitivity": sensitivity(tn, fp, fn, tp),
+               "specificity": specificity(tn, fp, fn, tp),
+               "precision": precision(tn, fp, fn, tp)}
+
+    return metrics
+
+
+def convert_to_np_array(element):
+    return np.array(element)
+
+
+def load_image_and_convert_np(element):
+    img = read_image2(element)
+    return convert_to_np_array(img)

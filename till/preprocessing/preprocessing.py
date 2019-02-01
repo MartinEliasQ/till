@@ -6,8 +6,18 @@ import math
 from sklearn.model_selection import train_test_split
 import shutil
 from till.utils import (get_from_dict, loader, str_join,
-                        crop_Image_rect, save_Image, get_folder_info, str_join_array, create_folder, create_multiple_folder, rev_str_join_array)
+                        crop_Image_rect,
+                        save_Image,
+                        get_folder_info,
+                        str_join_array,
+                        create_folder,
+                        create_multiple_folder,
+                        rev_str_join_array,
+                        load_image_and_convert_np)
 from till.preprocessing import face
+
+from imgaug import augmenters as iaa
+import imgaug as ia
 
 
 class preprocessing(object):
@@ -65,12 +75,13 @@ class preprocessing(object):
             print(path_image_in_folder)
             for i in range(len(path_image_in_folder)):
                 preprocessing.to_face(
-                    path_image_in_folder[i], path_output_image_in_folder[i])
+                    path_image_in_folder[i], path_output_image_in_folder[i], method=method)
             count += 1
 
     @staticmethod
     def fff_directory(directory, output, method="dnn"):
-        preprocessing.flow_from_face_directory(directory, output, method)
+        preprocessing.flow_from_face_directory(
+            directory, output, method=method)
 
     @staticmethod
     def flow_from_video_directory(directory, output, verboose=True):
@@ -93,10 +104,10 @@ class preprocessing(object):
         preprocessing.flow_from_video_directory(directory, output, verboose)
 
     @staticmethod
-    def prepare_dataset(input="videos", output="data", faces="faces", verboose=True):
+    def prepare_dataset(input="videos", output="data", faces="faces", method="dnn", verboose=True):
         create_multiple_folder([input, output, faces])
         preprocessing.ffv_directory(input, output)
-        preprocessing.fff_directory(output, faces)
+        preprocessing.fff_directory(output, faces, method=method)
 
     @staticmethod
     def generate_dataset(dataset, faces):
@@ -132,3 +143,55 @@ class preprocessing(object):
 
             for z in img_test:
                 shutil.copy2(z, to_folder[2])
+
+    @staticmethod
+    def data_augmentation(images):
+        aug = preprocessing.get_augmenters()
+        return iaa.Sequential(aug).augment_images(images)
+
+    @staticmethod
+    def get_augmenters():
+        return [
+            iaa.Scale((224, 224)),
+            iaa.Sometimes(0.25, iaa.GaussianBlur(sigma=(0, 3.0))),
+            iaa.Fliplr(0.5),
+            iaa.Affine(rotate=(-20, 20), mode='symmetric'),
+            iaa.Sometimes(0.25,
+                          iaa.OneOf([iaa.Dropout(p=(0, 0.1)),
+                                     iaa.CoarseDropout(0.1, size_percent=0.5)])),
+            iaa.AddToHueAndSaturation(value=(-10, 10), per_channel=True),
+            iaa.Sometimes(0.3, iaa.OneOf([iaa.Add(-10),
+                                          iaa.Add(45),
+                                          iaa.Add(80)])),
+            iaa.Sometimes(0.3, iaa.OneOf([iaa.Dropout(0.03),
+                                          iaa.Dropout(0.05)])),
+
+            iaa.Sometimes(0.3, iaa.OneOf([iaa.ContrastNormalization(0.5),
+                                          iaa.ContrastNormalization(1.2),
+                                          iaa.PerspectiveTransform(0.075),
+                                          iaa.PerspectiveTransform(0.100),
+                                          iaa.PerspectiveTransform(0.125)])),
+
+            iaa.Sometimes(0.3, iaa.OneOf([iaa.Grayscale(alpha=1.0),
+                                          iaa.Grayscale(alpha=0.5),
+                                          iaa.Grayscale(alpha=0.2)])),
+            iaa.Sometimes(0.3, iaa.OneOf([iaa.CoarsePepper(size_percent=0.30),
+                                          iaa.CoarsePepper(size_percent=0.02),
+                                          iaa.CoarsePepper(size_percent=0.1)])),
+            iaa.Sometimes(0.3, iaa.OneOf([iaa.SaltAndPepper(p=0.05),
+                                          iaa.SaltAndPepper(p=0.03)])),
+        ]
+
+    @staticmethod
+    def load_images_folder(folder="dataset/train"):
+        _, images = get_folder_info(folder)
+        images = str_join_array(folder, images)
+        images_np = map(lambda x: load_image_and_convert_np(x), images)
+        return np.array(list(images_np))
+
+    @staticmethod
+    def data_aug_train(self, folder="dataset/train"):
+        folders, _ = get_folder_info(folder)
+        for folder in folders:
+
+            pass
