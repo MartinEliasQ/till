@@ -30,6 +30,6 @@ import time
 preprocessing.prepare_dataset()
 
 preprocessing.generate_dataset("dataset", "faces")
-
+preprocessing.data_aug_train()
 # print(tl.check_device())
 # print(tl.transforms_data())

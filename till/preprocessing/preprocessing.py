@@ -15,6 +15,7 @@ from till.utils import (get_from_dict, loader, str_join,
                         rev_str_join_array,
                         load_image_and_convert_np)
 from till.preprocessing import face
+from PIL import Image
 
 from imgaug import augmenters as iaa
 import imgaug as ia
@@ -147,7 +148,7 @@ class preprocessing(object):
     @staticmethod
     def data_augmentation(images):
         aug = preprocessing.get_augmenters()
-        return iaa.Sequential(aug).augment_images(images)
+        return iaa.Sequential(aug).augment_image(images)
 
     @staticmethod
     def get_augmenters():
@@ -183,15 +184,25 @@ class preprocessing(object):
         ]
 
     @staticmethod
-    def load_images_folder(folder="dataset/train"):
+    def load_images_folder(folder):
         _, images = get_folder_info(folder)
         images = str_join_array(folder, images)
         images_np = map(lambda x: load_image_and_convert_np(x), images)
-        return np.array(list(images_np))
+        return (images, np.array(list(images_np)))
 
     @staticmethod
-    def data_aug_train(self, folder="dataset/train"):
-        folders, _ = get_folder_info(folder)
-        for folder in folders:
+    def save_aug_array(image_path, img_array_aug):
+        for i in range(len(image_path)):
+            aug_dest = image_path[i].split(".jpg")[0] + "_AUG.jpg"
+            Image.fromarray(preprocessing.data_augmentation(
+                img_array_aug[i])).save(aug_dest)
 
-            pass
+    @staticmethod
+    def data_aug_train(folder="dataset/train"):
+        folders, _ = get_folder_info(folder)
+        folders_path = str_join_array(folder, folders)
+        print(folders_path)
+        for folder in folders_path:
+            image_path, img_array_aug = preprocessing.load_images_folder(
+                folder)
+            preprocessing.save_aug_array(image_path, img_array_aug)
